@@ -11,6 +11,15 @@ const api = axios.create({
   },
 });
 
+// Add response interceptor to handle errors globally
+api.interceptors.response.use(
+  response => response,
+  error => {
+    console.error('API Error:', error.response || error.message);
+    return Promise.reject(error);
+  }
+);
+
 // Projects API
 export const fetchProject = async (projectId = 1) => {
   const response = await api.get(`/projects/${projectId}`);

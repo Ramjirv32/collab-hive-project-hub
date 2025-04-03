@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,7 +54,7 @@ const getStatusColor = (status) => {
   }
 };
 
-const TasksList = ({ tasks, members, onAddTask, onUpdateTaskStatus }) => {
+const TasksList = ({ tasks = [], members = [], onAddTask, onUpdateTaskStatus }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newTask, setNewTask] = useState({
     title: "",
@@ -75,20 +74,24 @@ const TasksList = ({ tasks, members, onAddTask, onUpdateTaskStatus }) => {
         ...newTask,
       };
       
-      onAddTask(taskToAdd);
-      toast.success("Task added successfully", {
-        description: `"${newTask.title}" has been added to your tasks.`
-      });
-      
-      setNewTask({
-        title: "",
-        description: "",
-        status: "Todo",
-        assignee: "",
-        dueDate: "",
-        priority: "Medium",
-      });
-      setIsDialogOpen(false);
+      if (typeof onAddTask === 'function') {
+        onAddTask(taskToAdd);
+        toast.success("Task added successfully", {
+          description: `"${newTask.title}" has been added to your tasks.`
+        });
+        setNewTask({
+          title: "",
+          description: "",
+          status: "Todo",
+          assignee: "",
+          dueDate: "",
+          priority: "Medium",
+        });
+        setIsDialogOpen(false);
+      } else {
+        console.error("onAddTask function is not provided to TasksList component");
+        toast.error("Couldn't add task: Internal error");
+      }
     } else {
       toast.error("Task title is required");
     }
@@ -169,9 +172,8 @@ const TasksList = ({ tasks, members, onAddTask, onUpdateTaskStatus }) => {
   };
 
   const filteredTasks = useMemo(() => {
-    let result = [...tasks];
+    let result = [...(tasks || [])];
     
-    // Apply filters
     if (filterBy !== "all") {
       if (filterBy === "completed") {
         result = result.filter(task => task.status === "Completed");
@@ -184,19 +186,15 @@ const TasksList = ({ tasks, members, onAddTask, onUpdateTaskStatus }) => {
       }
     }
     
-    // Apply sorting
     result.sort((a, b) => {
       if (sortBy === "dueDate") {
-        // Sort by due date (ascending)
         if (!a.dueDate) return 1;
         if (!b.dueDate) return -1;
         return new Date(a.dueDate) - new Date(b.dueDate);
       } else if (sortBy === "priority") {
-        // Sort by priority (high to low)
         const priorityValues = { High: 3, Medium: 2, Low: 1 };
         return priorityValues[b.priority] - priorityValues[a.priority];
       } else if (sortBy === "title") {
-        // Sort by title (A-Z)
         return a.title.localeCompare(b.title);
       }
       return 0;
@@ -206,6 +204,8 @@ const TasksList = ({ tasks, members, onAddTask, onUpdateTaskStatus }) => {
   }, [tasks, filterBy, sortBy]);
 
   const getFilterCount = (filter) => {
+    if (!tasks || tasks.length === 0) return 0;
+    
     if (filter === "all") return tasks.length;
     if (filter === "completed") return tasks.filter(t => t.status === "Completed").length;
     if (filter === "inprogress") return tasks.filter(t => t.status === "In Progress").length;
@@ -428,8 +428,13 @@ const TasksList = ({ tasks, members, onAddTask, onUpdateTaskStatus }) => {
                   <Select
                     value={task.status}
                     onValueChange={(value) => {
-                      onUpdateTaskStatus(task.id, value);
-                      toast.success(`Task status updated to ${value}`);
+                      if (typeof onUpdateTaskStatus === 'function') {
+                        onUpdateTaskStatus(task.id, value);
+                        toast.success(`Task status updated to ${value}`);
+                      } else {
+                        console.error("onUpdateTaskStatus function is not provided");
+                        toast.error("Couldn't update task status: Internal error");
+                      }
                     }}
                   >
                     <SelectTrigger className="w-[140px] h-8 text-xs">
